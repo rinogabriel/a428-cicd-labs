@@ -1,65 +1,46 @@
-📌 Langkah-Langkah Membangun CI Pipeline dengan Jenkins
+# 🚀 Continuous Integration Pipeline dengan Jenkins
 
-🔹 1. Menjalankan Jenkins di Docker
-Untuk memulai, kita akan menjalankan Jenkins di dalam Docker container. Jenkins digunakan untuk mengotomatiskan proses build, test, dan deployment aplikasi.
+## 📌 Deskripsi
 
-🛠️ Langkah-langkah:
-Buka Terminal/CMD di komputer Anda.
+Repositori ini berisi contoh implementasi **Continuous Integration (CI) Pipeline menggunakan Jenkins** untuk aplikasi **React**. Dengan pipeline ini, setiap perubahan pada kode akan **di-build dan diuji secara otomatis**, meningkatkan efisiensi dalam pengembangan perangkat lunak.
 
-Buat jaringan bridge di Docker dengan perintah berikut:
+## 🔧 Prasyarat
+Sebelum memulai, pastikan Anda telah menginstal:
+- **Docker** & **Docker Compose**
+- **Git**
+- **Jenkins**
+- **Node.js** & **npm**
 
-sh
--------------------------------------------------------------------------------------------------------------------------------
+## 📂 Struktur Direktori
+```
+├── jenkins/
+│   ├── scripts/
+│   │   ├── test.sh
+│   ├── Jenkinsfile
+├── src/
+│   ├── App.js
+│   ├── App.test.js
+├── package.json
+├── README.md
+```
+
+## 🚀 Langkah-langkah Implementasi
+
+### 1️⃣ Menjalankan Jenkins di Docker
+
+```sh
 docker network create jenkins
-Jalankan Docker in Docker (DinD) untuk Jenkins, karena kita akan menjalankan aplikasi dalam container di dalam container lain.
 
-sh
---------------------------------------------------------------------------------------------------------------------------------
 docker run --name jenkins-docker --detach --privileged --network jenkins \
 --network-alias docker --env DOCKER_TLS_CERTDIR=/certs \
 --volume jenkins-docker-certs:/certs/client --volume jenkins-data:/var/jenkins_home \
 --publish 2376:2376 --publish 3000:3000 --restart always docker:dind --storage-driver overlay2
-Penjelasan parameter penting:
+```
 
---name jenkins-docker → Menamai container sebagai jenkins-docker
-
---detach → Menjalankan container di latar belakang.
-
---privileged → Memungkinkan akses ke Docker daemon.
-
---network jenkins → Menghubungkan container ini ke jaringan jenkins.
-
---publish 2376:2376 → Mengekspos Docker daemon ke port 2376.
-
---restart always → Jika container mati, maka otomatis restart.
-
-Buat Dockerfile untuk menjalankan Jenkins dengan plugin Blue Ocean.
-
-sh
-----------------------------------------------------------------------------------------------------------------------------------
-nano Dockerfile
-Isi Dockerfile:
-
-dockerfile
-----------------------------------------------------------------------------------------------------------------------------------
-FROM jenkins/jenkins:2.346.1-jdk11
-USER root
-RUN apt-get update && apt-get install -y lsb-release
-RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc https://download.docker.com/linux/debian/gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.asc] \
-https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-RUN apt-get update && apt-get install -y docker-ce-cli
-USER jenkins
-RUN jenkins-plugin-cli --plugins "blueocean:1.25.5 docker-workflow:1.28"
-Build image Jenkins dengan Blue Ocean:
-
-sh
----------------------------------------------------------------------------------------------------------------------------------
+### 2️⃣ Menjalankan Jenkins dengan Blue Ocean UI
+```sh
 docker build -t myjenkins-blueocean:2.346.1-1 .
-Jalankan Jenkins container dengan Blue Ocean UI:
 
-sh
-----------------------------------------------------------------------------------------------------------------------------------
 docker run --name jenkins-blueocean --detach --network jenkins \
 --env DOCKER_HOST=tcp://docker:2376 --env DOCKER_CERT_PATH=/certs/client \
 --env DOCKER_TLS_VERIFY=1 --publish 8080:8080 --publish 50000:50000 \
@@ -67,78 +48,33 @@ docker run --name jenkins-blueocean --detach --network jenkins \
 --volume "$HOME":/home --restart=on-failure \
 --env JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true" \
 myjenkins-blueocean:2.346.1-1
+```
 
-🔹 2. Menyiapkan Jenkins Wizard
-Sebelum menggunakan Jenkins, kita perlu melakukan konfigurasi awal.
+### 3️⃣ Konfigurasi Jenkins
+1. **Buka Jenkins**: `http://localhost:8080`
+2. **Unlock Jenkins** dengan password dari log:
+   ```sh
+   docker logs jenkins-blueocean
+   ```
+3. **Install Suggested Plugins**.
+4. **Buat Admin User** dan **Save Configuration**.
 
-🛠️ Langkah-langkah:
-Akses Jenkins melalui browser:
+### 4️⃣ Clone Repository & Konfigurasi Pipeline
 
-arduino
-----------------------------------------------------------------------------------------------------------------------------------------
-http://localhost:8080
-Ambil password administrator dari Jenkins log:
+```sh
+git clone -b react-app https://github.com/USERNAME-GITHUB/a428-cicd-labs.git
+cd a428-cicd-labs
+```
 
-sh
--------------------------------------------------------------------------------------------------------------------------------
-docker logs jenkins-blueocean
-Masukkan password di halaman Unlock Jenkins.
+1. **Buka Jenkins** → **Create a new job** → Pilih **Pipeline**
+2. **Pilih** `Pipeline script from SCM` → **Masukkan Repository URL**
+3. **Branch Specifier**: `*/react-app`
+4. **Simpan dan Jalankan Pipeline**
 
-Install Suggested Plugins untuk Jenkins.
+### 5️⃣ Membuat Jenkinsfile
+Buat file `Jenkinsfile` di root proyek dengan isi berikut:
 
-Buat admin user dan simpan konfigurasi.
-
-Mulai menggunakan Jenkins!
-
-🔹 3. Fork dan Clone React App Repository
-Jenkins akan digunakan untuk mengotomatiskan proses build dan test aplikasi React.
-
-🛠️ Langkah-langkah:
-Login ke GitHub dan fork repository aplikasi React dari Dicoding Academy.
-
-Clone repository ke komputer lokal:
-
-sh
-----------------------------------------------------------------------------------------------------------------------------------
-git clone -b react-app https://github.com/USERNAME-AKUN-GITHUB-ANDA/a428-cicd-labs.git
-Buka proyek dengan Visual Studio Code.
-
-🔹 4. Membuat Pipeline Project di Jenkins
-Pipeline akan dibuat untuk mengelola proses CI/CD.
-
-🛠️ Langkah-langkah:
-Buka Jenkins dan klik Create a job.
-
-Masukkan nama pipeline (misal: react-app).
-
-Pilih Pipeline dan klik OK.
-
-Pada Pipeline script from SCM:
-
-Pilih Git.
-
-Masukkan path repository lokal:
-
-bash
----------------------------------------------------------------------------------------------------------------------------
-/home/Documents/Belajar_Implementasi_CICD/Jenkins/a428-cicd-labs
-Ubah Branch Specifier menjadi:
-
-bash
-----------------------------------------------------------------------------------------------------------------------------
-*/react-app
-Klik Save.
-
-🔹 5. Membuat Jenkins Pipeline dengan Jenkinsfile
-Jenkinsfile digunakan untuk mendefinisikan pipeline sebagai kode.
-
-🛠️ Langkah-langkah:
-Buat file baru bernama Jenkinsfile di root folder proyek.
-
-Tambahkan kode berikut:
-
-groovy
------------------------------------------------------------------------------------------------------------------------------
+```groovy
 pipeline {
     agent {
         docker {
@@ -152,52 +88,41 @@ pipeline {
                 sh 'npm install'
             }
         }
+        stage('Test') {
+            steps {
+                sh './jenkins/scripts/test.sh'
+            }
+        }
     }
 }
-Simpan dan commit file Jenkinsfile:
+```
 
-sh
--------------------------------------------------------------------------------------------------------------------------------------
-git add .
-git commit -m “Add initial Jenkinsfile”
-Jalankan pipeline di Blue Ocean.
+### 6️⃣ Commit & Push Jenkinsfile
+```sh
+git add Jenkinsfile
+git commit -m "Add Jenkinsfile"
+git push origin react-app
+```
 
-🔹 6. Menambahkan Tahapan Testing
-Kita perlu menambahkan tahap Test dalam Jenkinsfile.
+### 7️⃣ Menjalankan Pipeline
+1. **Buka Jenkins → Blue Ocean UI**
+2. **Jalankan Pipeline**
+3. **Pastikan semua tahap berhasil (Build & Test)** ✅
 
-🛠️ Langkah-langkah:
-Edit Jenkinsfile, tambahkan:
-
-groovy
--------------------------------------------------------------------------------------------------------------------------------------------
-stage('Test') {
-    steps {
-        sh './jenkins/scripts/test.sh'
-    }
-}
-Simpan dan commit perubahan:
-
-sh
---------------------------------------------------------------------------------------------------------------------------------------------
-git add .
-git commit -m “Add Test stage”
-Jalankan ulang pipeline di Blue Ocean.
-
-🔹 7. Mengelola Jenkins
-🛠️ Menjalankan kembali Jenkins jika dihentikan:
-sh
-
+### 🔄 Mengelola Jenkins
+**Menjalankan ulang Jenkins jika dihentikan:**
+```sh
 docker start jenkins-blueocean jenkins-docker
-🛠️ Menghentikan Jenkins:
-sh
-
+```
+**Menghentikan Jenkins:**
+```sh
 docker stop jenkins-blueocean jenkins-docker
-Akses kembali di:
+```
 
-arduino
-----------------------------------------------------------------------------------------------------------------------------------------------------
-http://localhost:8080
+## 🎯 Kesimpulan
+Dengan mengikuti langkah-langkah di atas, Anda telah berhasil mengimplementasikan **CI Pipeline dengan Jenkins**. Pipeline ini memastikan bahwa setiap perubahan pada aplikasi diuji dan dibangun secara otomatis, meningkatkan efisiensi dalam pengembangan perangkat lunak. 🚀
 
+---
+**📢 Catatan:** Jika mengalami error, cek log Jenkins dan pastikan semua dependensi telah diinstal dengan benar.
 
-🎯 Kesimpulan
-Anda telah berhasil membangun CI Pipeline menggunakan Jenkins untuk aplikasi React. Dengan pipeline ini, setiap perubahan pada kode akan di-build dan diuji secara otomatis, sehingga meningkatkan efisiensi dalam pengembangan perangkat lunak. 🚀
+Happy coding! 🎉
